@@ -8,6 +8,9 @@ from tkinter.scrolledtext import ScrolledText
 from selenium import webdriver
 from pynput import keyboard
 
+from image_pdf_scanner import scan_and_convert
+
+
 # ======================================================
 # GLOBAL STATE
 # ======================================================
@@ -159,6 +162,20 @@ def toggle_capture():
         log("Capture paused")
 
 # ======================================================
+# IMAGE TO PDF CONVERSION
+# ======================================================
+
+def convert_all_images_to_pdf():
+    if not ACTIVE_FOLDER:
+        messagebox.showwarning("Warning", "Select a folder first")
+        return
+
+    log("Scanning folders for images...")
+    scan_and_convert(ACTIVE_FOLDER, logger=log)
+    log("Image to PDF conversion completed")
+
+
+# ======================================================
 # GUI
 # ======================================================
 root = tk.Tk()
@@ -199,9 +216,19 @@ tk.Button(main, text="Select Folder", command=choose_folder)\
 tk.Button(main, text="Create Subfolder", command=create_subfolder)\
     .grid(row=2, column=1, sticky="ew", pady=5)
 
+# ===== Image → PDF (Folder Operation) =====
+tk.Button(
+    main,
+    text="Convert Images → PDF",
+    command=convert_all_images_to_pdf,
+    bg="#3498db",
+    fg="white",
+    font=("Segoe UI", 10, "bold")
+).grid(row=3, column=0, columnspan=2, sticky="ew", pady=(5, 10))
+
 # ---- Capture Controls ----
 tk.Label(main, text="Capture Control", font=("Segoe UI", 12, "bold")) \
-    .grid(row=3, column=0, columnspan=2, sticky="w", pady=(10, 0))
+    .grid(row=4, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
 toggle_btn = tk.Button(
     main,
@@ -210,7 +237,7 @@ toggle_btn = tk.Button(
     fg="white",
     command=toggle_capture
 )
-toggle_btn.grid(row=4, column=0, sticky="ew")
+toggle_btn.grid(row=5, column=0, sticky="ew")
 
 status_lbl = tk.Label(
     main,
@@ -218,25 +245,28 @@ status_lbl = tk.Label(
     font=("Segoe UI", 12, "bold"),
     fg="green"
 )
-status_lbl.grid(row=4, column=1)
+status_lbl.grid(row=5, column=1)
 
 # ---- Log ----
 tk.Label(main, text="Activity Log", font=("Segoe UI", 12, "bold")) \
-    .grid(row=5, column=0, columnspan=2, sticky="w", pady=(10, 0))
+    .grid(row=6, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
 log_box = ScrolledText(main, height=8, wrap="word")
-log_box.grid(row=6, column=0, columnspan=2, sticky="nsew")
-main.rowconfigure(6, weight=1)
+log_box.grid(row=7, column=0, columnspan=2, sticky="nsew")
+main.rowconfigure(7, weight=1)
 
 log(
     "Instructions:\n"
-    "- Edge opened by Selenium (driver auto-managed)\n"
-    "- Login & select unit manually\n"
-    "- Press 'S' to capture FULL PAGE\n"
-    "- Edit path bar or use Back/Forward\n"
-    "- Pause when typing\n"
-    "- ESC or close window to exit"
+    "- Select or navigate to the main/root folder\n"
+    "- Capture screenshots using 'S' key as usual\n"
+    "- Images are saved in the active folder\n"
+    "- Click 'Convert Images → PDF' to scan all subfolders\n"
+    "- Each folder containing images will get its own PDF\n"
+    "- PDFs are saved inside the same image folders\n"
+    "- Pause capture when typing paths manually\n"
+    "- Press ESC or close window to exit"
 )
+
 
 # ======================================================
 # EXIT

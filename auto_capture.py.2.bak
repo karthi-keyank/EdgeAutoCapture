@@ -1,0 +1,251 @@
+import os
+import base64
+from datetime import datetime
+import tkinter as tk
+from tkinter import filedialog, simpledialog, messagebox
+from tkinter.scrolledtext import ScrolledText
+
+from selenium import webdriver
+from pynput import keyboard
+
+# ======================================================
+# GLOBAL STATE
+# ======================================================
+SAVE_ROOT = None
+ACTIVE_FOLDER = None
+CAPTURE_ENABLED = True
+
+# ======================================================
+# SELENIUM SETUP (EDGE)
+# ======================================================
+options = webdriver.EdgeOptions()
+options.add_argument("--start-maximized")
+
+driver = webdriver.Edge(options=options)
+
+# ======================================================
+# LOGGING
+# ======================================================
+def log(msg):
+    log_box.insert(tk.END, msg + "\n")
+    log_box.see(tk.END)
+
+# ======================================================
+# SAFE FULL PAGE SCREENSHOT (CDP)
+# ======================================================
+def capture_full_page():
+    if not CAPTURE_ENABLED:
+        log("Capture paused – ignored")
+        return
+
+    if not ACTIVE_FOLDER:
+        log("No active folder selected")
+        return
+
+    if driver is None:
+        log("Browser driver not available")
+        return
+
+    # ---- Check browser window ----
+    try:
+        handles = driver.window_handles
+        if not handles:
+            log("No browser window found (Edge closed?)")
+            return
+        driver.switch_to.window(handles[0])
+    except Exception as e:
+        log(f"Browser not reachable: {e}")
+        return
+
+    # ---- Capture using DevTools ----
+    try:
+        result = driver.execute_cdp_cmd(
+            "Page.captureScreenshot",
+            {
+                "format": "png",
+                "captureBeyondViewport": True,
+                "fromSurface": True
+            }
+        )
+
+        if not result or "data" not in result:
+            log("Screenshot data not returned by browser")
+            return
+
+        image_data = base64.b64decode(result["data"])
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        file_path = os.path.join(ACTIVE_FOLDER, f"{timestamp}.png")
+
+        with open(file_path, "wb") as f:
+            f.write(image_data)
+
+        log(f"Saved: {file_path}")
+
+    except Exception as e:
+        log(f"Capture failed safely: {e}")
+
+# ======================================================
+# KEYBOARD LISTENER
+# ======================================================
+def on_press(key):
+    try:
+        if key.char.lower() == 's':
+            capture_full_page()
+    except AttributeError:
+        if key == keyboard.Key.esc:
+            log("ESC pressed – exiting")
+            on_close()
+            return False
+
+keyboard.Listener(on_press=on_press).start()
+
+# ======================================================
+# FOLDER MANAGEMENT
+# ======================================================
+def update_folder_display():
+    folder_box.config(state="normal")
+    folder_box.delete("1.0", tk.END)
+    folder_box.insert(tk.END, ACTIVE_FOLDER if ACTIVE_FOLDER else "None")
+    folder_box.config(state="disabled")
+
+def choose_root_folder():
+    global SAVE_ROOT, ACTIVE_FOLDER
+    folder = filedialog.askdirectory(title="Select Base Folder")
+    if folder:
+        SAVE_ROOT = folder
+        ACTIVE_FOLDER = folder
+        update_folder_display()
+        log("Base folder selected")
+
+def create_folder():
+    global ACTIVE_FOLDER
+    if not SAVE_ROOT:
+        messagebox.showwarning("Warning", "Select base folder first")
+        return
+
+    name = simpledialog.askstring("Folder Name", "Enter folder name:")
+    if name:
+        path = os.path.join(SAVE_ROOT, name)
+        os.makedirs(path, exist_ok=True)
+        ACTIVE_FOLDER = path
+        update_folder_display()
+        log(f"Folder created: {name}")
+
+def create_subfolder():
+    global ACTIVE_FOLDER
+    if not ACTIVE_FOLDER:
+        messagebox.showwarning("Warning", "No active folder")
+        return
+
+    name = simpledialog.askstring("Subfolder Name", "Enter subfolder name:")
+    if name:
+        path = os.path.join(ACTIVE_FOLDER, name)
+        os.makedirs(path, exist_ok=True)
+        ACTIVE_FOLDER = path
+        update_folder_display()
+        log(f"Subfolder created: {name}")
+
+# ======================================================
+# CAPTURE TOGGLE
+# ======================================================
+def toggle_capture():
+    global CAPTURE_ENABLED
+    CAPTURE_ENABLED = not CAPTURE_ENABLED
+
+    if CAPTURE_ENABLED:
+        toggle_btn.config(text="Pause Capture", bg="#e74c3c")
+        status_lbl.config(text="RUNNING", fg="green")
+        log("Capture resumed")
+    else:
+        toggle_btn.config(text="Resume Capture", bg="#2ecc71")
+        status_lbl.config(text="PAUSED", fg="red")
+        log("Capture paused")
+
+# ======================================================
+# GUI
+# ======================================================
+root = tk.Tk()
+root.title("SkillRack Full Page Screenshot Tool")
+root.geometry("620x560")
+root.minsize(560, 500)
+
+tk.Label(
+    root,
+    text="SkillRack Full Page Screenshot Tool",
+    font=("Segoe UI", 16, "bold")
+).pack(pady=10)
+
+main = tk.Frame(root)
+main.pack(fill="both", expand=True, padx=10)
+main.columnconfigure(0, weight=1)
+main.columnconfigure(1, weight=1)
+
+# ---- Folder Section ----
+tk.Label(main, text="Folder Management", font=("Segoe UI", 12, "bold")) \
+    .grid(row=0, column=0, columnspan=2, sticky="w")
+
+tk.Button(main, text="Select Base Folder", command=choose_root_folder) \
+    .grid(row=1, column=0, sticky="ew", pady=5)
+
+tk.Button(main, text="Create Folder", command=create_folder) \
+    .grid(row=1, column=1, sticky="ew", pady=5)
+
+tk.Button(main, text="Create Subfolder", command=create_subfolder) \
+    .grid(row=2, column=0, columnspan=2, sticky="ew", pady=5)
+
+tk.Label(main, text="Active Folder:") \
+    .grid(row=3, column=0, columnspan=2, sticky="w")
+
+folder_box = ScrolledText(main, height=2, wrap="word", state="disabled")
+folder_box.grid(row=4, column=0, columnspan=2, sticky="ew", pady=5)
+
+# ---- Capture Control ----
+tk.Label(main, text="Capture Control", font=("Segoe UI", 12, "bold")) \
+    .grid(row=5, column=0, columnspan=2, sticky="w", pady=(10, 0))
+
+toggle_btn = tk.Button(
+    main,
+    text="Pause Capture",
+    bg="#e74c3c",
+    fg="white",
+    command=toggle_capture
+)
+toggle_btn.grid(row=6, column=0, sticky="ew", pady=5)
+
+status_lbl = tk.Label(
+    main,
+    text="RUNNING",
+    font=("Segoe UI", 12, "bold"),
+    fg="green"
+)
+status_lbl.grid(row=6, column=1, sticky="ew")
+
+# ---- Log ----
+tk.Label(main, text="Activity Log", font=("Segoe UI", 12, "bold")) \
+    .grid(row=7, column=0, columnspan=2, sticky="w", pady=(10, 0))
+
+log_box = ScrolledText(main, height=8, wrap="word")
+log_box.grid(row=8, column=0, columnspan=2, sticky="nsew")
+main.rowconfigure(8, weight=1)
+
+log(
+    "Instructions:\n"
+    "- Edge opened by Selenium\n"
+    "- Login & select unit manually\n"
+    "- Press 'S' to capture FULL PAGE\n"
+    "- Use Pause when typing\n"
+    "- ESC or close window to exit"
+)
+
+# ======================================================
+# CLEAN EXIT
+# ======================================================
+def on_close():
+    try:
+        driver.quit()
+    except:
+        pass
+    root.destroy()
+
+root.protocol("WM_DELETE_WINDOW", on_close)
+root.mainloop()

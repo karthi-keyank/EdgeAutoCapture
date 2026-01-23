@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 from tkinter.scrolledtext import ScrolledText
 
 import core.state as state
@@ -8,10 +9,11 @@ from folders.navigation import (
     create_subfolder,
     go_back,
     go_forward,
-    set_active_folder
+    set_active_folder,
+    register_path_updater
 )
 from pdf.image_pdf_scanner import scan_and_convert
-from browser.browser_factory import create_browser
+from browser.browser_factory import create_browser, BrowserError
 
 
 def build_ui(app_context):
@@ -46,32 +48,55 @@ def build_ui(app_context):
         main,
         browser_var,
         "edge",
-        "chrome"
+        "chrome",
+        "opera"
     ).grid(row=1, column=0, sticky="ew")
 
-    def start_browser():
-        if app_context.get("driver"):
-            log("Browser already running")
-            return
-
-        browser_type = browser_var.get()
-        log(f"Starting browser: {browser_type}")
-
-        driver = create_browser(browser_type)
-
-        app_context["driver"] = driver
-        app_context["browser_type"] = browser_type
-
-        log("Browser started successfully")
-
-    tk.Button(
+    start_btn = tk.Button(
         main,
         text="Start Browser",
-        command=start_browser,
         bg="#2ecc71",
         fg="white",
         font=("Segoe UI", 10, "bold")
-    ).grid(row=1, column=1, sticky="ew")
+    )
+    start_btn.grid(row=1, column=1, sticky="ew")
+
+    def start_browser():
+        if app_context.get("driver"):
+            messagebox.showinfo(
+                "Browser Running",
+                "Browser is already running."
+            )
+            return
+
+        browser_type = browser_var.get()
+        log(f"Starting browser: {browser_type}", "INFO")
+
+        try:
+            start_btn.config(state="disabled")
+
+            driver = create_browser(browser_type)
+
+            app_context["driver"] = driver
+            app_context["browser_type"] = browser_type
+            state.BROWSER_RUNNING = True
+
+            log("Browser started successfully", "INFO")
+
+        except BrowserError as e:
+            messagebox.showerror("Browser Error", str(e))
+            log(str(e), "ERROR")
+            start_btn.config(state="normal")
+
+        except Exception as e:
+            messagebox.showerror(
+                "Unexpected Error",
+                "Unexpected error while starting browser."
+            )
+            log(f"Unexpected error: {e}", "ERROR")
+            start_btn.config(state="normal")
+
+    start_btn.config(command=start_browser)
 
     # ==============================
     # FOLDER NAVIGATION
@@ -93,7 +118,23 @@ def build_ui(app_context):
     path_entry = tk.Entry(nav, textvariable=path_var)
     path_entry.grid(row=0, column=1, sticky="ew", padx=5)
 
+    # Allow navigation.py to update the Entry
+    register_path_updater(path_var.set)
+
+    # Navigate when Enter is pressed
     path_entry.bind("<Return>", lambda e: set_active_folder(path_var.get()))
+
+    # Pause capture while typing paths
+    def on_focus_in(event):
+        state.CAPTURE_ENABLED = False
+        log("Capture paused (typing path)", "WARN")
+
+    def on_focus_out(event):
+        state.CAPTURE_ENABLED = True
+        log("Capture resumed", "INFO")
+
+    path_entry.bind("<FocusIn>", on_focus_in)
+    path_entry.bind("<FocusOut>", on_focus_out)
 
     tk.Button(
         main,
@@ -112,12 +153,16 @@ def build_ui(app_context):
     # ==============================
     def convert_images():
         if not state.ACTIVE_FOLDER:
-            log("Select a folder first")
+            messagebox.showwarning(
+                "No Folder Selected",
+                "Please select a folder first."
+            )
+            log("PDF conversion skipped – no folder selected", "WARN")
             return
 
-        log("Scanning folders for images...")
+        log("Scanning folders for images...", "INFO")
         scan_and_convert(state.ACTIVE_FOLDER, logger=log)
-        log("Image to PDF conversion completed")
+        log("Image to PDF conversion completed", "INFO")
 
     tk.Button(
         main,
@@ -158,11 +203,11 @@ def build_ui(app_context):
         if state.CAPTURE_ENABLED:
             toggle_btn.config(text="Pause Capture", bg="#e74c3c")
             status_lbl.config(text="RUNNING", fg="green")
-            log("Capture resumed")
+            log("Capture resumed", "INFO")
         else:
             toggle_btn.config(text="Resume Capture", bg="#2ecc71")
             status_lbl.config(text="PAUSED", fg="red")
-            log("Capture paused")
+            log("Capture paused", "WARN")
 
     toggle_btn.config(command=toggle_capture)
 
@@ -179,6 +224,7 @@ def build_ui(app_context):
     log_box.grid(row=9, column=0, columnspan=2, sticky="nsew")
     main.rowconfigure(9, weight=1)
 
+    # Initialize logger (this sets up color tags)
     init_logger(log_box)
 
     log(
@@ -190,5 +236,6 @@ def build_ui(app_context):
         "- Convert Images → PDF scans all subfolders\n"
         "- Each image folder gets its own PDF\n"
         "- Pause capture when typing paths\n"
-        "- Press ESC or close window to exit"
+        "- Press ESC or close window to exit",
+        "INFO"
     )

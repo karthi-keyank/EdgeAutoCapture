@@ -1,4 +1,12 @@
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
+
+
+# ==============================
+# CUSTOM ERRORS
+# ==============================
+class BrowserLaunchError(Exception):
+    pass
 
 
 def create_driver():
@@ -6,15 +14,21 @@ def create_driver():
     Create and return a Microsoft Edge WebDriver.
 
     Selenium Manager automatically:
-    - detects installed Edge version
+    - detects installed Edge
     - downloads matching msedgedriver
-    - caches it for future runs
     """
+
     options = webdriver.EdgeOptions()
     options.add_argument("--start-maximized")
 
-    driver = webdriver.Edge(options=options)
-    return driver
+    try:
+        driver = webdriver.Edge(options=options)
+        return driver
+
+    except WebDriverException as e:
+        raise BrowserLaunchError(
+            f"Failed to start Edge browser: {e}"
+        ) from e
 
 
 def close_driver(driver):

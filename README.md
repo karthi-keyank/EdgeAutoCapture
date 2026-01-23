@@ -5,7 +5,7 @@
 
 **SkillRack Capture Tool** is a **Windows desktop application** designed to take **full-page screenshots** of SkillRack problems (or any webpage) using **Microsoft Edge**.
 
-It captures the **entire webpage in one image**, even content that requires scrolling.
+It captures the **entire webpage in one image**, even content that requires scrolling, and can now also **convert captured images into PDFs automatically**.
 
 No Python. No coding.
 Just **run the EXE and press `S`**.
@@ -27,6 +27,7 @@ Normal screenshots:
 * Waste time
 
 This tool solves that with **one key press** 🎯
+…and now also helps you **organize screenshots into PDFs** 📄
 
 ---
 
@@ -36,7 +37,7 @@ Before using, ensure:
 
 * ✅ **Windows 10 or Windows 11**
 * ✅ **Microsoft Edge installed** (default on Windows)
-* ✅ Internet connection
+* ✅ Internet connection (first run)
 * ❌ No Python required
 * ❌ No browser extensions required
 
@@ -63,7 +64,7 @@ No installation. No setup.
 2. A window titled **“SkillRack Capture Tool”** opens
 3. Microsoft Edge will open automatically
 
-⚠️ Do **not** close Edge
+⚠️ Do **not** close Edge manually
 
 ---
 
@@ -168,7 +169,7 @@ You may accidentally press **S**.
 
 ---
 
-## 📁 Screenshot Output Format
+## 🖼️ Screenshot Output Format
 
 All screenshots are:
 
@@ -185,12 +186,61 @@ This avoids overwriting and keeps files organized.
 
 ---
 
+## 📄 NEW FEATURE: Convert Images → PDF
+
+The tool now supports **automatic image-to-PDF conversion**.
+
+### 🔹 What This Feature Does
+
+* Scans the **selected folder and all subfolders**
+* Detects folders that contain images
+* Converts **all images in each folder into a single PDF**
+* Saves the PDF **inside the same folder**
+* Does **not reduce image quality**
+
+---
+
+### 🔹 How to Use Image → PDF Conversion
+
+1. Select or navigate to the **main/root folder**
+
+   * Example: `SkillRack / C-Programming /`
+2. Click **“Convert Images → PDF”**
+3. The tool will:
+
+   * Go through all subfolders
+   * Create one PDF per image folder
+4. PDFs are saved automatically
+
+📄 No manual selection needed
+📄 No quality loss
+📄 Unlimited folder depth supported
+
+---
+
+### 🔹 Example Folder Structure
+
+```
+C-Programming/
+ ├─ Unit_1/
+ │   ├─ 1.png
+ │   ├─ 2.png
+ │   └─ Unit_1.pdf
+ ├─ Unit_2/
+ │   ├─ a.png
+ │   ├─ b.png
+ │   └─ Unit_2.pdf
+```
+
+---
+
 ## 📜 Activity Log (How to Read It)
 
 The log shows:
 
 * Selected folder path
 * Screenshot saved location
+* PDF creation status
 * Pause / Resume actions
 * Errors (if any)
 
@@ -209,9 +259,10 @@ If something goes wrong, **check the log first** 👀
 
 ## ✅ Best Practices
 
-* Always create **unit-wise folders**
+* Create **unit-wise folders**
 * Pause capture while typing
 * Capture after the page fully loads
+* Convert images to PDF after finishing a unit
 * Exit using **ESC** or window close button
 
 ---
@@ -223,6 +274,7 @@ If something goes wrong, **check the log first** 👀
 * Study material collection
 * Exam documentation
 * Any scrollable webpage
+* Image-to-PDF notes organization
 
 ---
 
@@ -244,7 +296,7 @@ Use responsibly.
 
 * Screenshot preview
 * Auto folder naming
-* PDF export
+* PDF merge options
 * Hotkey customization
 * Chrome / Firefox support
 
